@@ -1,32 +1,37 @@
-using Microsoft.AspNetCore.Mvc;
-using Backend.Models;
 using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Microsoft.IdentityModel.Tokens;
+using Backend.Models;
+using Microsoft.AspNetCore.Mvc;
+namespace Backend.Controllersusing Microsoft.IdentityModel.Tokens;
 
-namespace Backend.Controllers
+
 {
     [ApiController]
     [Route("loginAuth")]
     public class AuthController : ControllerBase
     {
         [HttpPost("login")]
+        [ProducesResponseType(typeof(Login), StatusCodes.Status200Ok)]
+        [ProducesResponseType(typeof(Login), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(Login), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(Login), StatusCodes.Status404NotFound)]
         public IActionResult Login(LoginModel login)
         {
-            if (login == null || string.IsNullOrEmpty(login.Document) || string.IsNullOrEmpty(login.Password))
+            if (!ModelState.IsValid)
             {
-                return BadRequest("Documento ou senha não fornecidos.");
-            }
-
-            if (!IsValidUser(login.Document, login.Password))
-            {
-                return Unauthorized("Usuário ou senha inválidos.");
+                return BadRequest(ModelState);
             }
 
             try
             {
+                if (!IsValidUser(login.Document, login.Password))
+                {
+                    ModelState.AddModalError(string.Empty, "Usuário ou senha inválidos.")
+                    return Unauthorized();
+                }
+                
                 var token = GenerateJwtToken(login.Document);
                 return Ok(new { token });
             }
@@ -54,7 +59,7 @@ namespace Backend.Controllers
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        public static SymmetricSecurityKey GenerateRandomSecurityKey() 
+        public static SymmetricSecurityKey GenerateRandomSecurityKey()
         {
             var keyBytes = new byte[32];
             new Random().NextBytes(keyBytes);
